@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -14,6 +13,8 @@ import (
 	"strings"
 
 	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 type Config struct {
@@ -160,7 +161,9 @@ func watch(r io.Reader) {
 			if err == io.EOF {
 				break
 			}
-			log.Fatalf("msg=bad_message error=%s", err)
+			log.Fatal().
+				Str("error", err.Error()).
+				Msg("bad_message")
 		}
 
 		// skip non-container messages
@@ -171,7 +174,9 @@ func watch(r io.Reader) {
 		// handle removing deleted/destroyed containers
 		if event.Status == "delete" || event.Status == "destroy" {
 			if _, ok := cm[event.ID]; ok {
-				log.Printf("msg=dead_container container_id=%v", event.ID[0:9])
+				log.Info().
+					Str("container_id", event.ID[0:9]).
+					Msg("dead_container")
 				delete(cm, event.ID)
 			}
 
@@ -183,8 +188,6 @@ func watch(r io.Reader) {
 			continue
 		}
 
-		// log.Printf("Got container: %+v", container)
-		// log.Printf("Got event: %+v", event)
 		appName, _ := container.Config.Labels["com.dokku.app-name"]
 		if appName == "" {
 			continue
@@ -200,9 +203,19 @@ func watch(r io.Reader) {
 			}
 
 			if container.RestartCount == container.HostConfig.RestartPolicy.MaximumRetryCount {
-				log.Printf("msg=rebuilding_app container_id=%v app=%v restart_policy=%v restart_count=%v max_restart_count=%v", event.ID[0:9], appName, container.HostConfig.RestartPolicy.Name, container.RestartCount, container.HostConfig.RestartPolicy.MaximumRetryCount)
+				log.Info().
+					Str("container_id", event.ID[0:9]).
+					Str("app", appName).
+					Str("restart_policy", container.HostConfig.RestartPolicy.Name).
+					Int("restart_count", container.RestartCount).
+					Int("max_restart_count", container.HostConfig.RestartPolicy.MaximumRetryCount).
+					Msg("rebuilding_app")
 				if err := runCommand("dokku", "--quiet", "ps:rebuild", appName); err != nil {
-					log.Printf("msg=rebuild_failed container_id=%v app=%v error=%v", event.ID[0:9], appName, err)
+					log.Warn().
+						Str("container_id", event.ID[0:9]).
+						Str("app", appName).
+						Str("error", err.Error()).
+						Msg("rebuild_failed")
 				}
 			}
 		}
@@ -213,8 +226,12 @@ func watch(r io.Reader) {
 		}
 
 		if _, ok := cm[event.ID]; !ok {
-			log.Printf("msg=new_container container_id=%v app=%v", event.ID[0:9], appName)
 			cm[event.ID] = container
+			log.Info().
+				Str("container_id", event.ID[0:9]).
+				Str("app", appName).
+				Str("ip_address", container.NetworkSettings.IpAddress).
+				Msg("new_container")
 			continue
 		}
 
@@ -226,17 +243,31 @@ func watch(r io.Reader) {
 			continue
 		}
 
-		log.Printf("msg=reloading_nginx container_id=%v app=%v old_ip_address=%v new_ip_address=%v", event.ID[0:9], appName, existingContainer.NetworkSettings.IpAddress, container.NetworkSettings.IpAddress)
+		log.Info().
+			Str("container_id", event.ID[0:9]).
+			Str("app", appName).
+			Str("old_ip_address", existingContainer.NetworkSettings.IpAddress).
+			Str("new_ip_address", container.NetworkSettings.IpAddress).
+			Msg("reloading_nginx")
+
 		if err := runCommand("dokku", "--quiet", "nginx:build-config", appName); err != nil {
-			log.Printf("msg=reload_failed container_id=%v app=%v error=%v", event.ID[0:9], appName, err)
+			log.Warn().
+				Str("container_id", event.ID[0:9]).
+				Str("app", appName).
+				Str("error", err.Error()).
+				Msg("reload_failed")
 		}
 	}
 }
 
 func main() {
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+
 	resp, err := request("/events")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().
+			Str("error", err.Error()).
+			Msg("stream_failure")
 	}
 	defer resp.Body.Close()
 	watch(resp.Body)
