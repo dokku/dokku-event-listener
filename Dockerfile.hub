@@ -1,0 +1,3 @@
+FROM scratch
+COPY ./build/linux/docker-event-listener /docker-event-listener
+ENTRYPOINT ["/docker-event-listener"]
