@@ -9,8 +9,10 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"os"
+	"os/exec"
+	"strings"
 
-	sh "github.com/codeskyblue/go-sh"
 	"github.com/docker/docker/pkg/jsonmessage"
 )
 
@@ -43,10 +45,51 @@ type Container struct {
 
 type containerMap map[string]*Container
 
+// ShellCmd represents a shell command to be run
+type ShellCmd struct {
+	Env           map[string]string
+	Command       *exec.Cmd
+	CommandString string
+	Args          []string
+	ShowOutput    bool
+	Error         error
+}
+
 const APIVERSION = "1.40"
 const DEBUG = true
 
 var cm containerMap
+
+// NewShellCmd returns a new ShellCmd struct
+func NewShellCmd(command string) *ShellCmd {
+	items := strings.Split(command, " ")
+	cmd := items[0]
+	args := items[1:]
+	return &ShellCmd{
+		Command:       exec.Command(cmd, args...),
+		CommandString: command,
+		Args:          args,
+		ShowOutput:    true,
+	}
+}
+
+// Execute is a lightweight wrapper around exec.Command
+func (sc *ShellCmd) Execute() bool {
+	env := os.Environ()
+	for k, v := range sc.Env {
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
+	}
+	sc.Command.Env = env
+	if sc.ShowOutput {
+		sc.Command.Stdout = os.Stdout
+		sc.Command.Stderr = os.Stderr
+	}
+	if err := sc.Command.Run(); err != nil {
+		sc.Error = err
+		return false
+	}
+	return true
+}
 
 func request(path string) (*http.Response, error) {
 	apiPath := fmt.Sprintf("/v%s%s", APIVERSION, path)
@@ -80,11 +123,13 @@ func request(path string) (*http.Response, error) {
 	return resp, nil
 }
 
-func runDokkuCommand(command string, appName string) error {
-	shellArgs := make([]interface{}, 2)
-	shellArgs[0] = command
-	shellArgs[1] = appName
-	return sh.Command("dokku", shellArgs...).Run()
+func runCommand(args ...string) error {
+	cmd := NewShellCmd(strings.Join(args, " "))
+	cmd.ShowOutput = false
+	if cmd.Execute() {
+		return nil
+	}
+	return cmd.Error
 }
 
 func getContainer(event jsonmessage.JSONMessage) (*Container, error) {
@@ -156,7 +201,7 @@ func watch(r io.Reader) {
 
 			if container.RestartCount == container.HostConfig.RestartPolicy.MaximumRetryCount {
 				log.Printf("msg=rebuilding_app container_id=%v app=%v restart_policy=%v restart_count=%v max_restart_count=%v", event.ID[0:9], appName, container.HostConfig.RestartPolicy.Name, container.RestartCount, container.HostConfig.RestartPolicy.MaximumRetryCount)
-				if err := runDokkuCommand("ps:rebuild", appName); err != nil {
+				if err := runCommand("dokku", "--quiet", "ps:rebuild", appName); err != nil {
 					log.Printf("msg=rebuild_failed container_id=%v app=%v error=%v", event.ID[0:9], appName, err)
 				}
 			}
@@ -182,7 +227,7 @@ func watch(r io.Reader) {
 		}
 
 		log.Printf("msg=reloading_nginx container_id=%v app=%v old_ip_address=%v new_ip_address=%v", event.ID[0:9], appName, existingContainer.NetworkSettings.IpAddress, container.NetworkSettings.IpAddress)
-		if err := runDokkuCommand("nginx:build-config", appName); err != nil {
+		if err := runCommand("dokku", "--quiet", "nginx:build-config", appName); err != nil {
 			log.Printf("msg=reload_failed container_id=%v app=%v error=%v", event.ID[0:9], appName, err)
 		}
 	}
