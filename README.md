@@ -27,7 +27,7 @@ scp init/upstart/docker-event-listener.conf jose@docker-event-listener.local:/tm
 sudo chown root:root /tmp/docker-event-listener*
 
 # copy the files into place (mv the correct init file as well)
-sudo mv /tmp/docker-event-listener /usr/local/bin/go-dokku-api
+sudo mv /tmp/docker-event-listener /usr/local/bin/docker-event-listener
 sudo mv /tmp/docker-event-listener.service /etc/systemd/system/docker-event-listener.service
 sudo mv /tmp/docker-event-listener.conf /etc/init/docker-event-listener.conf
 
