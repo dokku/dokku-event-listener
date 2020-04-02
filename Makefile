@@ -121,6 +121,7 @@ circleci:
 
 docker-image:
 	docker build --rm -q -f Dockerfile.hub -t $(IMAGE_NAME):$(DOCKER_IMAGE_VERSION) .
+	docker tag $(IMAGE_NAME):$(DOCKER_IMAGE_VERSION) $(IMAGE_NAME):hub
 
 bin/gh-release:
 	mkdir -p bin
