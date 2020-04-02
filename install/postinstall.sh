@@ -2,4 +2,4 @@
 
 systemctl --system daemon-reload
 systemctl daemon-reload
-systemctl enable docker-event-listener.target
+systemctl enable dokku-event-listener.target

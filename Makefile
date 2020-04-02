@@ -1,8 +1,8 @@
-NAME = docker-event-listener
-EMAIL = docker-event-listener@josediazgonzalez.com
+NAME = dokku-event-listener
+EMAIL = dokku-event-listener@josediazgonzalez.com
 MAINTAINER = dokku
 MAINTAINER_NAME = Jose Diaz-Gonzalez
-REPOSITORY = docker-event-listener
+REPOSITORY = dokku-event-listener
 HARDWARE = $(shell uname -m)
 SYSTEM_NAME  = $(shell uname -s | tr '[:upper:]' '[:lower:]')
 BASE_VERSION ?= 0.0.1

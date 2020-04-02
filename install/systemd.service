@@ -1,15 +1,15 @@
 [Unit]
-Description=docker-event-listener process
-PartOf=docker-event-listener.target
+Description=dokku-event-listener process
+PartOf=dokku-event-listener.target
 StopWhenUnneeded=yes
 
 [Service]
 WorkingDirectory=/
-Environment=PS=docker-event-listener
-EnvironmentFile=-/etc/default/docker-event-listener
-EnvironmentFile=-/etc/sysconfig/docker-event-listener
-ExecStartPre=/usr/bin/docker-event-listener init
-ExecStart=/usr/bin/docker-event-listener run
+Environment=PS=dokku-event-listener
+EnvironmentFile=-/etc/default/dokku-event-listener
+EnvironmentFile=-/etc/sysconfig/dokku-event-listener
+ExecStartPre=/usr/bin/dokku-event-listener init
+ExecStart=/usr/bin/dokku-event-listener run
 Restart=always
 RestartSec=10s
 StandardInput=null

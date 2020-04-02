@@ -1,4 +1,4 @@
-module github.com/dokku/docker-event-listener
+module github.com/dokku/dokku-event-listener
 
 go 1.12
 
