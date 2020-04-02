@@ -1,0 +1,18 @@
+[Unit]
+Description=docker-event-listener process
+PartOf=docker-event-listener.target
+StopWhenUnneeded=yes
+
+[Service]
+WorkingDirectory=/
+Environment=PS=docker-event-listener
+EnvironmentFile=-/etc/default/docker-event-listener
+EnvironmentFile=-/etc/sysconfig/docker-event-listener
+ExecStartPre=/usr/bin/docker-event-listener init
+ExecStart=/usr/bin/docker-event-listener run
+Restart=always
+RestartSec=10s
+StandardInput=null
+SyslogIdentifier=%n
+KillMode=mixed
+TimeoutStopSec=5

@@ -75,6 +75,7 @@ build/deb/$(NAME)_$(VERSION)_amd64.deb: build/linux/$(NAME)
 	export SOURCE_DATE_EPOCH=$(shell git log -1 --format=%ct) \
 		&& mkdir -p build/deb \
 		&& fpm \
+		--after-install install/postinstall.sh \
 		--architecture amd64 \
 		--category utils \
 		--description "$$PACKAGE_DESCRIPTION" \
@@ -89,12 +90,15 @@ build/deb/$(NAME)_$(VERSION)_amd64.deb: build/linux/$(NAME)
 		--version $(VERSION) \
 		--verbose \
 		build/linux/$(NAME)=/usr/bin/$(NAME) \
+		install/systemd.service=/etc/systemd/system/$(NAME).service \
+		install/systemd.target=/etc/systemd/system/$(NAME).target \
 		LICENSE=/usr/share/doc/$(NAME)/copyright
 
 build/rpm/$(NAME)-$(VERSION)-1.x86_64.rpm: build/linux/$(NAME)
 	export SOURCE_DATE_EPOCH=$(shell git log -1 --format=%ct) \
 		&& mkdir -p build/rpm \
 		&& fpm \
+		--after-install install/postinstall.sh \
 		--architecture x86_64 \
 		--category utils \
 		--description "$$PACKAGE_DESCRIPTION" \
@@ -110,6 +114,8 @@ build/rpm/$(NAME)-$(VERSION)-1.x86_64.rpm: build/linux/$(NAME)
 		--version $(VERSION) \
 		--verbose \
 		build/linux/$(NAME)=/usr/bin/$(NAME) \
+		install/systemd.service=/etc/systemd/system/$(NAME).service \
+		install/systemd.target=/etc/systemd/system/$(NAME).target \
 		LICENSE=/usr/share/doc/$(NAME)/copyright
 
 clean:
