@@ -166,98 +166,104 @@ func watch(r io.Reader) {
 				Msg("bad_message")
 		}
 
-		// skip non-container messages
-		if event.ID == "" {
-			continue
+		handleEvent(event)
+	}
+}
+
+func handleEvent(event jsonmessage.JSONMessage) (error) {
+	// skip non-container messages
+	if event.ID == "" {
+		return nil
+	}
+
+	// handle removing deleted/destroyed containers
+	if event.Status == "delete" || event.Status == "destroy" {
+		if _, ok := cm[event.ID]; ok {
+			log.Info().
+				Str("container_id", event.ID[0:9]).
+				Msg("dead_container")
+			delete(cm, event.ID)
 		}
 
-		// handle removing deleted/destroyed containers
-		if event.Status == "delete" || event.Status == "destroy" {
-			if _, ok := cm[event.ID]; ok {
-				log.Info().
-					Str("container_id", event.ID[0:9]).
-					Msg("dead_container")
-				delete(cm, event.ID)
-			}
+		return nil
+	}
 
-			continue
+	container, err := getContainer(event)
+	if err != nil {
+		return err
+	}
+
+	appName, _ := container.Config.Labels["com.dokku.app-name"]
+	if appName == "" {
+		return nil
+	}
+
+	if event.Status == "die" {
+		if container == nil {
+			return nil
 		}
 
-		container, err := getContainer(event)
-		if err != nil {
-			continue
+		if container.HostConfig.RestartPolicy.Name == "no" {
+			return nil
 		}
 
-		appName, _ := container.Config.Labels["com.dokku.app-name"]
-		if appName == "" {
-			continue
-		}
-
-		if event.Status == "die" {
-			if container == nil {
-				continue
-			}
-
-			if container.HostConfig.RestartPolicy.Name == "no" {
-				continue
-			}
-
-			if container.RestartCount == container.HostConfig.RestartPolicy.MaximumRetryCount {
-				log.Info().
-					Str("container_id", event.ID[0:9]).
-					Str("app", appName).
-					Str("restart_policy", container.HostConfig.RestartPolicy.Name).
-					Int("restart_count", container.RestartCount).
-					Int("max_restart_count", container.HostConfig.RestartPolicy.MaximumRetryCount).
-					Msg("rebuilding_app")
-				if err := runCommand("dokku", "--quiet", "ps:rebuild", appName); err != nil {
-					log.Warn().
-						Str("container_id", event.ID[0:9]).
-						Str("app", appName).
-						Str("error", err.Error()).
-						Msg("rebuild_failed")
-				}
-			}
-		}
-
-		// skip non-start events
-		if event.Status != "start" && event.Status != "restart" {
-			continue
-		}
-
-		if _, ok := cm[event.ID]; !ok {
-			cm[event.ID] = container
+		if container.RestartCount == container.HostConfig.RestartPolicy.MaximumRetryCount {
 			log.Info().
 				Str("container_id", event.ID[0:9]).
 				Str("app", appName).
-				Str("ip_address", container.NetworkSettings.IpAddress).
-				Msg("new_container")
-			continue
+				Str("restart_policy", container.HostConfig.RestartPolicy.Name).
+				Int("restart_count", container.RestartCount).
+				Int("max_restart_count", container.HostConfig.RestartPolicy.MaximumRetryCount).
+				Msg("rebuilding_app")
+			if err := runCommand("dokku", "--quiet", "ps:rebuild", appName); err != nil {
+				log.Warn().
+					Str("container_id", event.ID[0:9]).
+					Str("app", appName).
+					Str("error", err.Error()).
+					Msg("rebuild_failed")
+				return err
+			}
 		}
+	}
 
-		existingContainer := cm[event.ID]
+	// skip non-start events
+	if event.Status != "start" && event.Status != "restart" {
+		return nil
+	}
+
+	if _, ok := cm[event.ID]; !ok {
 		cm[event.ID] = container
-
-		// do nothing if the ip addresses match
-		if existingContainer.NetworkSettings.IpAddress == container.NetworkSettings.IpAddress {
-			continue
-		}
-
 		log.Info().
 			Str("container_id", event.ID[0:9]).
 			Str("app", appName).
-			Str("old_ip_address", existingContainer.NetworkSettings.IpAddress).
-			Str("new_ip_address", container.NetworkSettings.IpAddress).
-			Msg("reloading_nginx")
-
-		if err := runCommand("dokku", "--quiet", "nginx:build-config", appName); err != nil {
-			log.Warn().
-				Str("container_id", event.ID[0:9]).
-				Str("app", appName).
-				Str("error", err.Error()).
-				Msg("reload_failed")
-		}
+			Str("ip_address", container.NetworkSettings.IpAddress).
+			Msg("new_container")
+		return nil
 	}
+
+	existingContainer := cm[event.ID]
+	cm[event.ID] = container
+
+	// do nothing if the ip addresses match
+	if existingContainer.NetworkSettings.IpAddress == container.NetworkSettings.IpAddress {
+		return nil
+	}
+
+	log.Info().
+		Str("container_id", event.ID[0:9]).
+		Str("app", appName).
+		Str("old_ip_address", existingContainer.NetworkSettings.IpAddress).
+		Str("new_ip_address", container.NetworkSettings.IpAddress).
+		Msg("reloading_nginx")
+
+	if err := runCommand("dokku", "--quiet", "nginx:build-config", appName); err != nil {
+		log.Warn().
+			Str("container_id", event.ID[0:9]).
+			Str("app", appName).
+			Str("error", err.Error()).
+			Msg("reload_failed")
+	}
+	return err
 }
 
 func main() {
