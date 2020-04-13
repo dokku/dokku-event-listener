@@ -9,6 +9,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/events"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -74,7 +75,14 @@ func runCommand(args ...string) error {
 
 func watchEvents(ctx context.Context) {
 	cm = containerMap{}
-	events, errors := dockerClient.Events(ctx, types.EventsOptions{})
+
+	filters := filters.NewArgs(
+		filters.Arg("type", events.ContainerEventType),
+	)
+	events, errors := dockerClient.Events(ctx, types.EventsOptions{
+		Filters: filters,
+	})
+
 	for {
 		select {
 			case err := <-errors:
@@ -88,11 +96,6 @@ func watchEvents(ctx context.Context) {
 }
 
 func handleEvent(ctx context.Context, event events.Message) (error) {
-	// skip non-container messages
-	if event.ID == "" {
-		return nil
-	}
-
 	// handle removing deleted/destroyed containers
 	if event.Status == "delete" || event.Status == "destroy" {
 		if _, ok := cm[event.ID]; ok {
