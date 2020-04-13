@@ -1,9 +1,9 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -12,7 +12,9 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/events"
+	"github.com/docker/docker/client"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -36,7 +38,7 @@ type RestartPolicy struct {
 
 type Container struct {
 	Config          Config
-	Event           jsonmessage.JSONMessage
+	Event           events.Message
 	HostConfig      HostConfig
 	ID              string
 	Name            string
@@ -60,6 +62,7 @@ const APIVERSION = "1.40"
 const DEBUG = true
 
 var cm containerMap
+var dockerClient *client.Client
 
 // NewShellCmd returns a new ShellCmd struct
 func NewShellCmd(command string) *ShellCmd {
@@ -133,7 +136,7 @@ func runCommand(args ...string) error {
 	return cmd.Error
 }
 
-func getContainer(event jsonmessage.JSONMessage) (*Container, error) {
+func getContainer(event events.Message) (*Container, error) {
 	resp, err := request("/containers/" + event.ID + "/json")
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't find container for event %#v: %s", event, err)
@@ -151,26 +154,22 @@ func getContainer(event jsonmessage.JSONMessage) (*Container, error) {
 	return container, json.Unmarshal(body, &container)
 }
 
-func watch(r io.Reader) {
+func watchEvents(ctx context.Context) {
 	cm = containerMap{}
-
-	dec := json.NewDecoder(r)
+	events, errors := dockerClient.Events(ctx, types.EventsOptions{})
 	for {
-		event := jsonmessage.JSONMessage{}
-		if err := dec.Decode(&event); err != nil {
-			if err == io.EOF {
-				break
-			}
-			log.Fatal().
-				Str("error", err.Error()).
-				Msg("bad_message")
+		select {
+			case err := <-errors:
+				log.Fatal().
+					Err(err).
+					Msg("events_failure")
+			case event := <-events:
+				handleEvent(event)
 		}
-
-		handleEvent(event)
 	}
 }
 
-func handleEvent(event jsonmessage.JSONMessage) (error) {
+func handleEvent(event events.Message) (error) {
 	// skip non-container messages
 	if event.ID == "" {
 		return nil
@@ -269,12 +268,13 @@ func handleEvent(event jsonmessage.JSONMessage) (error) {
 func main() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
-	resp, err := request("/events")
+	var err error
+	dockerClient, err = client.NewClientWithOpts(client.WithVersion(APIVERSION))
 	if err != nil {
 		log.Fatal().
-			Str("error", err.Error()).
-			Msg("stream_failure")
+			Err(err).
+			Msg("api_connect_failed")
 	}
-	defer resp.Body.Close()
-	watch(resp.Body)
+	ctx := context.Background()
+	watchEvents(ctx)
 }
