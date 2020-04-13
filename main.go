@@ -2,12 +2,7 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net"
-	"net/http"
-	"net/http/httputil"
 	"os"
 	"os/exec"
 	"strings"
@@ -19,34 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type Config struct {
-	Labels map[string]string
-}
-
-type HostConfig struct {
-	RestartPolicy RestartPolicy
-}
-
-type NetworkSettings struct {
-	IpAddress string
-}
-
-type RestartPolicy struct {
-	Name              string
-	MaximumRetryCount int
-}
-
-type Container struct {
-	Config          Config
-	Event           events.Message
-	HostConfig      HostConfig
-	ID              string
-	Name            string
-	NetworkSettings NetworkSettings
-	RestartCount    int
-}
-
-type containerMap map[string]*Container
+type containerMap map[string]*types.ContainerJSON
 
 // ShellCmd represents a shell command to be run
 type ShellCmd struct {
@@ -95,38 +63,6 @@ func (sc *ShellCmd) Execute() bool {
 	return true
 }
 
-func request(path string) (*http.Response, error) {
-	apiPath := fmt.Sprintf("/v%s%s", APIVERSION, path)
-	req, err := http.NewRequest("GET", apiPath, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	conn, err := net.Dial("unix", "/var/run/docker.sock")
-	if err != nil {
-		return nil, err
-	}
-
-	clientconn := httputil.NewClientConn(conn, nil)
-	resp, err := clientconn.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return nil, err
-		}
-		if len(body) == 0 {
-			return nil, fmt.Errorf("Error: %s", http.StatusText(resp.StatusCode))
-		}
-
-		return nil, fmt.Errorf("HTTP %s: %s", http.StatusText(resp.StatusCode), body)
-	}
-	return resp, nil
-}
-
 func runCommand(args ...string) error {
 	cmd := NewShellCmd(strings.Join(args, " "))
 	cmd.ShowOutput = false
@@ -134,24 +70,6 @@ func runCommand(args ...string) error {
 		return nil
 	}
 	return cmd.Error
-}
-
-func getContainer(event events.Message) (*Container, error) {
-	resp, err := request("/containers/" + event.ID + "/json")
-	if err != nil {
-		return nil, fmt.Errorf("Couldn't find container for event %#v: %s", event, err)
-	}
-	defer resp.Body.Close()
-
-	container := &Container{}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	container.Event = event
-	container.ID = event.ID
-	return container, json.Unmarshal(body, &container)
 }
 
 func watchEvents(ctx context.Context) {
@@ -164,12 +82,12 @@ func watchEvents(ctx context.Context) {
 					Err(err).
 					Msg("events_failure")
 			case event := <-events:
-				handleEvent(event)
+				handleEvent(ctx, event)
 		}
 	}
 }
 
-func handleEvent(event events.Message) (error) {
+func handleEvent(ctx context.Context, event events.Message) (error) {
 	// skip non-container messages
 	if event.ID == "" {
 		return nil
@@ -187,7 +105,7 @@ func handleEvent(event events.Message) (error) {
 		return nil
 	}
 
-	container, err := getContainer(event)
+	container, err := dockerClient.ContainerInspect(ctx, event.ID)
 	if err != nil {
 		return err
 	}
@@ -198,10 +116,6 @@ func handleEvent(event events.Message) (error) {
 	}
 
 	if event.Status == "die" {
-		if container == nil {
-			return nil
-		}
-
 		if container.HostConfig.RestartPolicy.Name == "no" {
 			return nil
 		}
@@ -231,28 +145,28 @@ func handleEvent(event events.Message) (error) {
 	}
 
 	if _, ok := cm[event.ID]; !ok {
-		cm[event.ID] = container
+		cm[event.ID] = &container
 		log.Info().
 			Str("container_id", event.ID[0:9]).
 			Str("app", appName).
-			Str("ip_address", container.NetworkSettings.IpAddress).
+			Str("ip_address", container.NetworkSettings.Networks["bridge"].IPAddress).
 			Msg("new_container")
 		return nil
 	}
 
 	existingContainer := cm[event.ID]
-	cm[event.ID] = container
+	cm[event.ID] = &container
 
 	// do nothing if the ip addresses match
-	if existingContainer.NetworkSettings.IpAddress == container.NetworkSettings.IpAddress {
+	if existingContainer.NetworkSettings.Networks["bridge"].IPAddress == container.NetworkSettings.Networks["bridge"].IPAddress {
 		return nil
 	}
 
 	log.Info().
 		Str("container_id", event.ID[0:9]).
 		Str("app", appName).
-		Str("old_ip_address", existingContainer.NetworkSettings.IpAddress).
-		Str("new_ip_address", container.NetworkSettings.IpAddress).
+		Str("old_ip_address", existingContainer.NetworkSettings.Networks["bridge"].IPAddress).
+		Str("new_ip_address", container.NetworkSettings.Networks["bridge"].IPAddress).
 		Msg("reloading_nginx")
 
 	if err := runCommand("dokku", "--quiet", "nginx:build-config", appName); err != nil {
