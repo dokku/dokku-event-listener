@@ -96,19 +96,22 @@ func watchEvents(ctx context.Context) {
 }
 
 func handleEvent(ctx context.Context, event events.Message) (error) {
+	containerId := event.ID
+	containerShortId := containerId[0:9]
+
 	// handle removing deleted/destroyed containers
 	if event.Status == "delete" || event.Status == "destroy" {
-		if _, ok := cm[event.ID]; ok {
+		if _, ok := cm[containerId]; ok {
 			log.Info().
-				Str("container_id", event.ID[0:9]).
+				Str("container_id", containerShortId).
 				Msg("dead_container")
-			delete(cm, event.ID)
+			delete(cm, containerId)
 		}
 
 		return nil
 	}
 
-	container, err := dockerClient.ContainerInspect(ctx, event.ID)
+	container, err := dockerClient.ContainerInspect(ctx, containerId)
 	if err != nil {
 		return err
 	}
@@ -125,7 +128,7 @@ func handleEvent(ctx context.Context, event events.Message) (error) {
 
 		if container.RestartCount == container.HostConfig.RestartPolicy.MaximumRetryCount {
 			log.Info().
-				Str("container_id", event.ID[0:9]).
+				Str("container_id", containerShortId).
 				Str("app", appName).
 				Str("restart_policy", container.HostConfig.RestartPolicy.Name).
 				Int("restart_count", container.RestartCount).
@@ -133,7 +136,7 @@ func handleEvent(ctx context.Context, event events.Message) (error) {
 				Msg("rebuilding_app")
 			if err := runCommand("dokku", "--quiet", "ps:rebuild", appName); err != nil {
 				log.Warn().
-					Str("container_id", event.ID[0:9]).
+					Str("container_id", containerShortId).
 					Str("app", appName).
 					Str("error", err.Error()).
 					Msg("rebuild_failed")
@@ -147,18 +150,18 @@ func handleEvent(ctx context.Context, event events.Message) (error) {
 		return nil
 	}
 
-	if _, ok := cm[event.ID]; !ok {
-		cm[event.ID] = &container
+	if _, ok := cm[containerId]; !ok {
+		cm[containerId] = &container
 		log.Info().
-			Str("container_id", event.ID[0:9]).
+			Str("container_id", containerShortId).
 			Str("app", appName).
 			Str("ip_address", container.NetworkSettings.Networks["bridge"].IPAddress).
 			Msg("new_container")
 		return nil
 	}
 
-	existingContainer := cm[event.ID]
-	cm[event.ID] = &container
+	existingContainer := cm[containerId]
+	cm[containerId] = &container
 
 	// do nothing if the ip addresses match
 	if existingContainer.NetworkSettings.Networks["bridge"].IPAddress == container.NetworkSettings.Networks["bridge"].IPAddress {
@@ -166,7 +169,7 @@ func handleEvent(ctx context.Context, event events.Message) (error) {
 	}
 
 	log.Info().
-		Str("container_id", event.ID[0:9]).
+		Str("container_id", containerShortId).
 		Str("app", appName).
 		Str("old_ip_address", existingContainer.NetworkSettings.Networks["bridge"].IPAddress).
 		Str("new_ip_address", container.NetworkSettings.Networks["bridge"].IPAddress).
@@ -174,7 +177,7 @@ func handleEvent(ctx context.Context, event events.Message) (error) {
 
 	if err := runCommand("dokku", "--quiet", "nginx:build-config", appName); err != nil {
 		log.Warn().
-			Str("container_id", event.ID[0:9]).
+			Str("container_id", containerShortId).
 			Str("app", appName).
 			Str("error", err.Error()).
 			Msg("reload_failed")
