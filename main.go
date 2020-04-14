@@ -79,6 +79,7 @@ func watchEvents(ctx context.Context) {
 
 	filters := filters.NewArgs(
 		filters.Arg("type", events.ContainerEventType),
+		filters.Arg("label", DOKKU_APP_LABEL),
 	)
 	events, errors := dockerClient.Events(ctx, types.EventsOptions{
 		Filters: filters,
@@ -117,10 +118,7 @@ func handleEvent(ctx context.Context, event events.Message) (error) {
 		return err
 	}
 
-	appName, _ := container.Config.Labels[DOKKU_APP_LABEL]
-	if appName == "" {
-		return nil
-	}
+	appName := container.Config.Labels[DOKKU_APP_LABEL]
 
 	if event.Action == "die" {
 		if container.HostConfig.RestartPolicy.Name == "no" {
