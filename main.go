@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/events"
@@ -74,14 +76,40 @@ func runCommand(args ...string) error {
 	return cmd.Error
 }
 
-func watchEvents(ctx context.Context) {
+func registerContainers(ctx context.Context) error {
 	cm = containerMap{}
+	filters := filters.NewArgs(
+		filters.Arg("label", DOKKU_APP_LABEL),
+	)
+	containers, err := dockerClient.ContainerList(ctx, types.ContainerListOptions{
+		Filters: filters,
+	})
+	if err != nil {
+		return err
+	}
 
+	for _, container := range containers {
+		containerJSON, err := dockerClient.ContainerInspect(ctx, container.ID)
+		if err != nil {
+			return err
+		}
+		cm[container.ID] = &containerJSON
+		log.Info().
+			Str("container_id", container.ID[0:9]).
+			Str("app", containerJSON.Config.Labels[DOKKU_APP_LABEL]).
+			Str("ip_address", containerJSON.NetworkSettings.Networks["bridge"].IPAddress).
+			Msg("register_container")
+	}
+	return nil
+}
+
+func watchEvents(ctx context.Context, sinceTimestamp int64) {
 	filters := filters.NewArgs(
 		filters.Arg("type", events.ContainerEventType),
 		filters.Arg("label", DOKKU_APP_LABEL),
 	)
 	events, errors := dockerClient.Events(ctx, types.EventsOptions{
+		Since: strconv.FormatInt(sinceTimestamp, 10),
 		Filters: filters,
 	})
 
@@ -195,5 +223,11 @@ func main() {
 			Msg("api_connect_failed")
 	}
 	ctx := context.Background()
-	watchEvents(ctx)
+	startupTimestamp := time.Now().Unix()
+	if err := registerContainers(ctx); err != nil {
+		log.Fatal().
+			Err(err).
+			Msg("containers_init_failed")
+	}
+	watchEvents(ctx, startupTimestamp)
 }
