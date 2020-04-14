@@ -29,6 +29,7 @@ type ShellCmd struct {
 
 const APIVERSION = "1.40"
 const DEBUG = true
+const DOKKU_APP_LABEL = "com.dokku.app-name"
 
 var cm containerMap
 var dockerClient *client.Client
@@ -116,7 +117,7 @@ func handleEvent(ctx context.Context, event events.Message) (error) {
 		return err
 	}
 
-	appName, _ := container.Config.Labels["com.dokku.app-name"]
+	appName, _ := container.Config.Labels[DOKKU_APP_LABEL]
 	if appName == "" {
 		return nil
 	}
