@@ -96,11 +96,11 @@ func watchEvents(ctx context.Context) {
 }
 
 func handleEvent(ctx context.Context, event events.Message) (error) {
-	containerId := event.ID
+	containerId := event.Actor.ID
 	containerShortId := containerId[0:9]
 
 	// handle removing deleted/destroyed containers
-	if event.Status == "delete" || event.Status == "destroy" {
+	if event.Action == "delete" || event.Action == "destroy" {
 		if _, ok := cm[containerId]; ok {
 			log.Info().
 				Str("container_id", containerShortId).
@@ -121,7 +121,7 @@ func handleEvent(ctx context.Context, event events.Message) (error) {
 		return nil
 	}
 
-	if event.Status == "die" {
+	if event.Action == "die" {
 		if container.HostConfig.RestartPolicy.Name == "no" {
 			return nil
 		}
@@ -146,7 +146,7 @@ func handleEvent(ctx context.Context, event events.Message) (error) {
 	}
 
 	// skip non-start events
-	if event.Status != "start" && event.Status != "restart" {
+	if event.Action != "start" && event.Action != "restart" {
 		return nil
 	}
 
