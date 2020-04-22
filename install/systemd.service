@@ -8,8 +8,7 @@ WorkingDirectory=/
 Environment=PS=dokku-event-listener
 EnvironmentFile=-/etc/default/dokku-event-listener
 EnvironmentFile=-/etc/sysconfig/dokku-event-listener
-ExecStartPre=/usr/bin/dokku-event-listener init
-ExecStart=/usr/bin/dokku-event-listener run
+ExecStart=/usr/bin/dokku-event-listener
 Restart=always
 RestartSec=10s
 StandardInput=null
