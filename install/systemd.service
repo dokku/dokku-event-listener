@@ -1,7 +1,6 @@
 [Unit]
 Description=dokku-event-listener process
 PartOf=dokku-event-listener.target
-StopWhenUnneeded=yes
 
 [Service]
 WorkingDirectory=/
