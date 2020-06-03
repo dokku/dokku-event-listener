@@ -29,7 +29,7 @@ type ShellCmd struct {
 	Error         error
 }
 
-const APIVERSION = "1.40"
+const APIVERSION = "1.25"
 const DEBUG = true
 const DOKKU_APP_LABEL = "com.dokku.app-name"
 
