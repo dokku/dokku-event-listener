@@ -11,7 +11,7 @@ require (
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
-	github.com/rs/zerolog v1.19.0
+	github.com/rs/zerolog v1.20.0
 	github.com/sirupsen/logrus v1.5.0 // indirect
 	google.golang.org/grpc v1.28.1 // indirect
 )
