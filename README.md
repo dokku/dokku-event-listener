@@ -6,66 +6,31 @@ Service that listens to docker events and runs dokku commands.
 
 - golang 1.12+
 
-## Usage
+## Background
 
-### Build the binary
+This package tails the Docker event stream for container events and performs specific actions depending on those events.
 
-> For a prebuilt binary, see the [github releases page](https://github.com/dokku/dokku-event-listener/releases).
+- Container restarts that result in IP address changes will result in call to `dokku nginx:build-config` for the related app.
+- Container restarts that exceed the maximum restart policy retry count for the given container will result in a call to `dokku ps:rebuild` for the related app.
 
-A [Dockerfile](/Dockerfile.build) is provided for building the binary.
+Note that this is only performed for Dokku app containers with the label `com.dokku.app-name`. If the container is missing that label, then no action will be performed when that container emits events on the Docker event stream.
+
+## Installation
+
+Debian and RPM packages are available via [packagecloud](https://packagecloud.io/dokku/dokku)
+
+For a prebuilt binaries, see the [github releases page](https://github.com/dokku/dokku-event-listener/releases).
+
+## Building from source
+
+A make target is provided for building the package from source.
 
 ```shell
-# build the binary
 make build
 ```
 
-### Install binary
+In addition, builds can be performed in an isolated Docker container:
 
 ```shell
-# copy binary to your server
-scp build/linux/dokku-event-listener <user@your-server>:/tmp/
-sudo chown root:root /tmp/dokku-event-listener
-sudo mv /tmp/dokku-event-listener /usr/local/bin/dokku-event-listener
-```
-
-### Install systemd service
-
-If your system uses systemd, follow these steps:
-
-Copy the [dokku-event-listener.service](/init/systemd/dokku-event-listener.service) to your system
-
-```shell
-scp init/systemd/dokku-event-listener.service <user@your-server>:/tmp/
-```
-
-On the system, change ownership to root and move to the systemd directory
-
-```shell
-sudo chown root:root /tmp/dokku-event-listener.service
-sudo mv /tmp/dokku-event-listener.service /etc/systemd/system/dokku-event-listener.service
-```
-
-### Install upstart conf
-
-If your system uses upstart, follow these steps:
-
-Copy the [dokku-event-listener.conf](/init/upstart/dokku-event-listener.conf) to your system
-
-```shell
-scp init/upstart/dokku-event-listener.conf <user@your-server>:/tmp/
-```
-
-On the system, change ownership to root and move to the upstart directory
-
-```shell
-sudo chown root:root /tmp/dokku-event-listener.conf
-sudo mv /tmp/dokku-event-listener.conf /etc/init/dokku-event-listener.conf
-```
-
-### Configure service
-
-```shell
-# start the service and enable it at boot
-sudo systemctl start dokku-event-listener.service
-sudo systemctl enable dokku-event-listener.service
+make build-docker-image build-in-docker
 ```
