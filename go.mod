@@ -3,6 +3,7 @@ module github.com/dokku/dokku-event-listener
 go 1.12
 
 require (
+	github.com/Microsoft/go-winio v0.4.16 // indirect
 	github.com/containerd/containerd v1.3.3 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.13.1
@@ -11,7 +12,7 @@ require (
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
-	github.com/rs/zerolog v1.20.0
+	github.com/rs/zerolog v1.21.0
 	github.com/sirupsen/logrus v1.5.0 // indirect
 	google.golang.org/grpc v1.28.1 // indirect
 )
