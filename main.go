@@ -93,6 +93,14 @@ func registerContainers(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		if _, ok := containerJSON.NetworkSettings.Networks["bridge"]; !ok {
+			log.Info().
+				Str("container_id", container.ID[0:9]).
+				Str("app", containerJSON.Config.Labels[DOKKU_APP_LABEL]).
+				Msg("register_skip:non-bridge-network")
+			continue
+		}
+
 		cm[container.ID] = &containerJSON
 		log.Info().
 			Str("container_id", container.ID[0:9]).
@@ -174,6 +182,14 @@ func handleEvent(ctx context.Context, event events.Message) (error) {
 
 	// skip non-start events
 	if event.Action != "start" && event.Action != "restart" {
+		return nil
+	}
+
+	if _, ok := container.NetworkSettings.Networks["bridge"]; !ok {
+		log.Info().
+			Str("container_id", containerShortId).
+			Str("app", appName).
+			Msg("non-bridge-network")
 		return nil
 	}
 
