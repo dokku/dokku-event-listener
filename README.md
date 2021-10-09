@@ -1,4 +1,4 @@
-# dokku-event-listener [![CircleCI](https://circleci.com/gh/dokku/dokku-event-listener.svg?style=svg)](https://circleci.com/gh/dokku/dokku-event-listener)
+# dokku-event-listener
 
 Service that listens to docker events and runs dokku commands.
 
