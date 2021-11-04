@@ -32,6 +32,7 @@ type ShellCmd struct {
 const APIVERSION = "1.25"
 const DEBUG = true
 const DOKKU_APP_LABEL = "com.dokku.app-name"
+const DOKKU_PROCESS_TYPE_LABEL = "com.dokku.process-type=web"
 
 var cm containerMap
 var dockerClient *client.Client
@@ -80,6 +81,7 @@ func registerContainers(ctx context.Context) error {
 	cm = containerMap{}
 	filters := filters.NewArgs(
 		filters.Arg("label", DOKKU_APP_LABEL),
+		filters.Arg("label", DOKKU_PROCESS_TYPE_LABEL),
 	)
 	containers, err := dockerClient.ContainerList(ctx, types.ContainerListOptions{
 		Filters: filters,
@@ -115,6 +117,7 @@ func watchEvents(ctx context.Context, sinceTimestamp int64) {
 	filters := filters.NewArgs(
 		filters.Arg("type", events.ContainerEventType),
 		filters.Arg("label", DOKKU_APP_LABEL),
+		filters.Arg("label", DOKKU_PROCESS_TYPE_LABEL),
 	)
 	events, errors := dockerClient.Events(ctx, types.EventsOptions{
 		Since: strconv.FormatInt(sinceTimestamp, 10),
