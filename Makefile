@@ -80,6 +80,7 @@ build/linux/$(NAME)-arm64:
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a -asmflags=-trimpath=/src -gcflags=-trimpath=/src \
 										-ldflags "-s -w -X main.Version=$(VERSION)" \
 										-o build/linux/$(NAME)-arm64
+
 build/linux/$(NAME)-armhf:
 	mkdir -p build/linux
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=5 go build -a -asmflags=-trimpath=/src -gcflags=-trimpath=/src \
