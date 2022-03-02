@@ -219,9 +219,9 @@ func handleEvent(ctx context.Context, event events.Message) (error) {
 		Str("app", appName).
 		Str("old_ip_address", existingContainer.NetworkSettings.Networks["bridge"].IPAddress).
 		Str("new_ip_address", container.NetworkSettings.Networks["bridge"].IPAddress).
-		Msg("reloading_nginx")
+		Msg("reloading_proxy")
 
-	if err := runCommand("dokku", "--quiet", "nginx:build-config", appName); err != nil {
+	if err := runCommand("dokku", "--quiet", "proxy:build-config", appName); err != nil {
 		log.Warn().
 			Str("container_id", containerShortId).
 			Str("app", appName).
