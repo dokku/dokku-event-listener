@@ -29,5 +29,3 @@ require (
 	google.golang.org/grpc v1.41.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 )
-
-replace github.com/docker/docker => github.com/docker/engine v0.0.0-20200309214505-aa6a9891b09c
