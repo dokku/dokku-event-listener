@@ -3,7 +3,7 @@ module github.com/dokku/dokku-event-listener
 go 1.18
 
 require (
-	github.com/docker/docker v20.10.15+incompatible
+	github.com/docker/docker v20.10.16+incompatible
 	github.com/rs/zerolog v1.26.1
 )
 
