@@ -4,7 +4,7 @@ Service that listens to docker events and runs dokku commands.
 
 ## Requirements
 
-- golang 1.12+
+- golang 1.19+
 
 ## Background
 
@@ -33,4 +33,11 @@ In addition, builds can be performed in an isolated Docker container:
 
 ```shell
 make build-docker-image build-in-docker
+```
+
+## Usage
+
+```shell
+# watch dokku containers
+dokku-event-listener
 ```
