@@ -34,3 +34,10 @@ In addition, builds can be performed in an isolated Docker container:
 ```shell
 make build-docker-image build-in-docker
 ```
+
+## Usage
+
+```shell
+# watch dokku containers
+dokku-event-listener
+```
