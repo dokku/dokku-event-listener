@@ -4,7 +4,7 @@ Service that listens to docker events and runs dokku commands.
 
 ## Requirements
 
-- golang 1.12+
+- golang 1.19+
 
 ## Background
 
