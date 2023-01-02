@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/docker/docker v20.10.17+incompatible
 	github.com/josegonzalez/cli-skeleton v0.6.0
-	github.com/mitchellh/cli v1.1.4
+	github.com/mitchellh/cli v1.1.5
 	github.com/posener/complete v1.2.3
 	github.com/rs/zerolog v1.27.0
 	github.com/spf13/pflag v1.0.5
@@ -13,9 +13,9 @@ require (
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20210608223527-2377c96fe795 // indirect
-	github.com/Masterminds/goutils v1.1.0 // indirect
+	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.1.1 // indirect
-	github.com/Masterminds/sprig/v3 v3.2.0 // indirect
+	github.com/Masterminds/sprig/v3 v3.2.1 // indirect
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310 // indirect
 	github.com/bgentry/speakeasy v0.1.0 // indirect
