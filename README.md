@@ -17,7 +17,7 @@ Note that this is only performed for Dokku app containers with the label `com.do
 
 ## Installation
 
-Debian and RPM packages are available via [packagecloud](https://packagecloud.io/dokku/dokku)
+Debian packages are available via [packagecloud](https://packagecloud.io/dokku/dokku)
 
 For a prebuilt binaries, see the [github releases page](https://github.com/dokku/dokku-event-listener/releases).
 
