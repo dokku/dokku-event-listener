@@ -14,7 +14,7 @@ on:
 jobs:
   build:
     name: build
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: true
     env:
@@ -22,7 +22,7 @@ jobs:
       PACKAGECLOUD_TOKEN: ${{ secrets.PACKAGECLOUD_TOKEN }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: make version
         run: |
           make version .env.docker
@@ -31,7 +31,7 @@ jobs:
       - run: make build-in-docker
       - run: make validate-in-docker
       - name: upload packages
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: build
           path: build/**/*
