@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/docker/docker v24.0.6+incompatible
-	github.com/josegonzalez/cli-skeleton v0.10.0
+	github.com/josegonzalez/cli-skeleton v0.11.0
 	github.com/mitchellh/cli v1.1.5
 	github.com/posener/complete v1.2.3
 	github.com/rs/zerolog v1.31.0
