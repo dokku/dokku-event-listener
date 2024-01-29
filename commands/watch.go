@@ -203,7 +203,7 @@ func registerContainers(ctx context.Context) error {
 
 func watchEvents(ctx context.Context, sinceTimestamp int64) {
 	filters := filters.NewArgs(
-		filters.Arg("type", events.ContainerEventType),
+		filters.Arg("type", string(events.ContainerEventType)),
 		filters.Arg("label", DOKKU_APP_LABEL),
 		filters.Arg("label", DOKKU_PROCESS_TYPE_LABEL),
 	)
@@ -256,7 +256,7 @@ func handleEvent(ctx context.Context, event events.Message) error {
 			log.Info().
 				Str("container_id", containerShortId).
 				Str("app", appName).
-				Str("restart_policy", container.HostConfig.RestartPolicy.Name).
+				Str("restart_policy", string(container.HostConfig.RestartPolicy.Name)).
 				Int("restart_count", container.RestartCount).
 				Int("max_restart_count", container.HostConfig.RestartPolicy.MaximumRetryCount).
 				Msg("rebuilding_app")
