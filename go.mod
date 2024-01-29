@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/docker/docker v24.0.7+incompatible
-	github.com/josegonzalez/cli-skeleton v0.11.0
+	github.com/josegonzalez/cli-skeleton v0.13.0
 	github.com/mitchellh/cli v1.1.5
 	github.com/posener/complete v1.2.3
 	github.com/rs/zerolog v1.31.0
@@ -42,7 +42,6 @@ require (
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
-	github.com/stretchr/testify v1.7.0 // indirect
 	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
