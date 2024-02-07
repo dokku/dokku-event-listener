@@ -3,7 +3,7 @@ module dokku-event-listener
 go 1.19
 
 require (
-	github.com/docker/docker v25.0.2+incompatible
+	github.com/docker/docker v25.0.3+incompatible
 	github.com/josegonzalez/cli-skeleton v0.15.0
 	github.com/mitchellh/cli v1.1.5
 	github.com/posener/complete v1.2.3
