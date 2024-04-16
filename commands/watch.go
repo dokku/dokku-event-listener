@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
@@ -171,7 +172,7 @@ func registerContainers(ctx context.Context) error {
 		filters.Arg("label", DOKKU_APP_LABEL),
 		filters.Arg("label", DOKKU_PROCESS_TYPE_LABEL),
 	)
-	containers, err := dockerClient.ContainerList(ctx, types.ContainerListOptions{
+	containers, err := dockerClient.ContainerList(ctx, container.ListOptions{
 		Filters: filters,
 	})
 	if err != nil {
