@@ -1,6 +1,6 @@
 module dokku-event-listener
 
-go 1.21
+go 1.22
 
 require (
 	github.com/docker/docker v27.0.2+incompatible
