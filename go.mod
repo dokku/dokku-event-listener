@@ -1,6 +1,7 @@
 module dokku-event-listener
 
-go 1.23
+go 1.23.0
+
 require (
 	github.com/docker/docker v27.3.1+incompatible
 	github.com/josegonzalez/cli-skeleton v0.19.0
