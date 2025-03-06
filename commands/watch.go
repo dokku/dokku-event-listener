@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/josegonzalez/cli-skeleton/command"
+	"github.com/moby/moby/api/types"
 	"github.com/posener/complete"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -208,7 +208,7 @@ func watchEvents(ctx context.Context, sinceTimestamp int64) {
 		filters.Arg("label", DOKKU_APP_LABEL),
 		filters.Arg("label", DOKKU_PROCESS_TYPE_LABEL),
 	)
-	events, errors := dockerClient.Events(ctx, types.EventsOptions{
+	events, errors := dockerClient.Events(ctx, events.ListOptions{
 		Since:   strconv.FormatInt(sinceTimestamp, 10),
 		Filters: filters,
 	})
