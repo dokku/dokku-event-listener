@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
@@ -21,7 +20,7 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-type containerMap map[string]*types.ContainerJSON
+type containerMap map[string]*container.InspectResponse
 
 // ShellCmd represents a shell command to be run
 type ShellCmd struct {
@@ -208,7 +207,7 @@ func watchEvents(ctx context.Context, sinceTimestamp int64) {
 		filters.Arg("label", DOKKU_APP_LABEL),
 		filters.Arg("label", DOKKU_PROCESS_TYPE_LABEL),
 	)
-	events, errors := dockerClient.Events(ctx, types.EventsOptions{
+	events, errors := dockerClient.Events(ctx, events.ListOptions{
 		Since:   strconv.FormatInt(sinceTimestamp, 10),
 		Filters: filters,
 	})
