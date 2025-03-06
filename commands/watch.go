@@ -14,14 +14,13 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/josegonzalez/cli-skeleton/command"
-	"github.com/moby/moby/api/types"
 	"github.com/posener/complete"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	flag "github.com/spf13/pflag"
 )
 
-type containerMap map[string]*types.ContainerJSON
+type containerMap map[string]*container.InspectResponse
 
 // ShellCmd represents a shell command to be run
 type ShellCmd struct {
