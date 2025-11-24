@@ -32,7 +32,6 @@ type ShellCmd struct {
 	Error         error
 }
 
-const APIVERSION = "1.25"
 const DEBUG = true
 const DOKKU_APP_LABEL = "com.dokku.app-name"
 const DOKKU_PROCESS_TYPE_LABEL = "com.dokku.process-type=web"
@@ -107,7 +106,10 @@ func (c *WatchCommand) Run(args []string) int {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
 	log.Info().Msg("Watching")
-	dockerClient, err = client.NewClientWithOpts(client.WithVersion(APIVERSION))
+	dockerClient, err = client.NewClientWithOpts(
+		client.FromEnv,
+		client.WithAPIVersionNegotiation(),
+	)
 	if err != nil {
 		log.Fatal().
 			Err(err).
