@@ -105,26 +105,37 @@ func (c *WatchCommand) Run(args []string) int {
 
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
-	log.Info().Msg("Watching")
-	dockerClient, err = client.NewClientWithOpts(
-		client.FromEnv,
-		client.WithAPIVersionNegotiation(),
-	)
-	if err != nil {
-		log.Fatal().
-			Err(err).
-			Msg("api_connect_failed")
-	}
 	ctx := context.Background()
-	startupTimestamp := time.Now().Unix()
-	if err := registerContainers(ctx); err != nil {
-		log.Fatal().
-			Err(err).
-			Msg("containers_init_failed")
-	}
-	watchEvents(ctx, startupTimestamp)
+	sinceTimestamp := time.Now().Unix()
 
-	return 0
+	const (
+		initialBackoff = 1 * time.Second
+		maxBackoff     = 60 * time.Second
+		backoffFactor  = 2
+	)
+	backoff := initialBackoff
+
+	for {
+		log.Info().Msg("connecting_to_docker")
+		start := time.Now()
+		err := reconnectAndWatch(ctx, &sinceTimestamp)
+		if err != nil {
+			if time.Since(start) > 30*time.Second {
+				backoff = initialBackoff
+			}
+			log.Error().
+				Err(err).
+				Dur("retry_in", backoff).
+				Msg("docker_disconnected")
+			time.Sleep(backoff)
+			backoff *= time.Duration(backoffFactor)
+			if backoff > maxBackoff {
+				backoff = maxBackoff
+			}
+			continue
+		}
+		return 0
+	}
 }
 
 // NewShellCmd returns a new ShellCmd struct
@@ -203,25 +214,50 @@ func registerContainers(ctx context.Context) error {
 	return nil
 }
 
-func watchEvents(ctx context.Context, sinceTimestamp int64) {
+func reconnectAndWatch(ctx context.Context, sinceTimestamp *int64) error {
+	var err error
+	dockerClient, err = client.NewClientWithOpts(
+		client.FromEnv,
+		client.WithAPIVersionNegotiation(),
+	)
+	if err != nil {
+		return fmt.Errorf("api_connect_failed: %w", err)
+	}
+	defer dockerClient.Close()
+
+	if err := registerContainers(ctx); err != nil {
+		return fmt.Errorf("containers_init_failed: %w", err)
+	}
+
+	log.Info().Msg("connected_to_docker")
+
+	return watchEvents(ctx, sinceTimestamp)
+}
+
+func watchEvents(ctx context.Context, sinceTimestamp *int64) error {
 	filters := filters.NewArgs(
 		filters.Arg("type", string(events.ContainerEventType)),
 		filters.Arg("label", DOKKU_APP_LABEL),
 		filters.Arg("label", DOKKU_PROCESS_TYPE_LABEL),
 	)
-	events, errors := dockerClient.Events(ctx, events.ListOptions{
-		Since:   strconv.FormatInt(sinceTimestamp, 10),
+	msgs, errs := dockerClient.Events(ctx, events.ListOptions{
+		Since:   strconv.FormatInt(*sinceTimestamp, 10),
 		Filters: filters,
 	})
 
 	for {
 		select {
-		case err := <-errors:
-			log.Fatal().
-				Err(err).
-				Msg("events_failure")
-		case event := <-events:
+		case err := <-errs:
+			log.Error().Err(err).Msg("events_stream_error")
+			return err
+		case event, ok := <-msgs:
+			if !ok {
+				return fmt.Errorf("events channel closed")
+			}
 			handleEvent(ctx, event)
+			if event.Time > 0 {
+				*sinceTimestamp = event.Time
+			}
 		}
 	}
 }
