@@ -83,6 +83,7 @@ build/deb/$(NAME)_$(VERSION)_amd64.deb: build/linux/$(NAME)-amd64
 		&& mkdir -p build/deb \
 		&& fpm \
 		--after-install install/postinstall.sh \
+		--before-remove install/preremove.sh \
 		--architecture amd64 \
 		--category utils \
 		--description "$$PACKAGE_DESCRIPTION" \
@@ -106,6 +107,7 @@ build/deb/$(NAME)_$(VERSION)_arm64.deb: build/linux/$(NAME)-arm64
 		&& mkdir -p build/deb \
 		&& fpm \
 		--after-install install/postinstall.sh \
+		--before-remove install/preremove.sh \
 		--architecture arm64 \
 		--category utils \
 		--description "$$PACKAGE_DESCRIPTION" \
