@@ -52,7 +52,7 @@ jobs:
           trimpath: true
 
       - name: Attest Build Provenance - darwin-amd64
-        uses: actions/attest-build-provenance@v4.1.0
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
             dist/${{ steps.repo-name.outputs.REPOSITORY_NAME }}-darwin-amd64
