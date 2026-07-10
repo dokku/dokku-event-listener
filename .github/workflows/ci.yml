@@ -37,6 +37,16 @@ jobs:
           name: build
           path: build/**/*
 
+  test:
+    name: test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go test ./...
+
   binary-check:
     name: binary-check
     runs-on: ubuntu-24.04

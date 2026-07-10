@@ -21,6 +21,9 @@ version:
 	@echo "$(CI_BRANCH)"
 	@echo "$(VERSION)"
 
+test:
+	go test ./...
+
 define PACKAGE_DESCRIPTION
 Service that listens to docker events and runs dokku commands
 endef
