@@ -9,11 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/events"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/client"
 	"github.com/josegonzalez/cli-skeleton/command"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/events"
+	"github.com/moby/moby/client"
 	"github.com/posener/complete"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -180,22 +179,21 @@ func runCommand(args ...string) error {
 
 func registerContainers(ctx context.Context) error {
 	cm = containerMap{}
-	filters := filters.NewArgs(
-		filters.Arg("label", DOKKU_APP_LABEL),
-		filters.Arg("label", DOKKU_PROCESS_TYPE_LABEL),
-	)
-	containers, err := dockerClient.ContainerList(ctx, container.ListOptions{
+	filters := make(client.Filters).
+		Add("label", DOKKU_APP_LABEL, DOKKU_PROCESS_TYPE_LABEL)
+	containers, err := dockerClient.ContainerList(ctx, client.ContainerListOptions{
 		Filters: filters,
 	})
 	if err != nil {
 		return err
 	}
 
-	for _, container := range containers {
-		containerJSON, err := dockerClient.ContainerInspect(ctx, container.ID)
+	for _, container := range containers.Items {
+		inspect, err := dockerClient.ContainerInspect(ctx, container.ID, client.ContainerInspectOptions{})
 		if err != nil {
 			return err
 		}
+		containerJSON := inspect.Container
 		if _, ok := containerJSON.NetworkSettings.Networks["bridge"]; !ok {
 			log.Info().
 				Str("container_id", container.ID[0:9]).
@@ -208,7 +206,7 @@ func registerContainers(ctx context.Context) error {
 		log.Info().
 			Str("container_id", container.ID[0:9]).
 			Str("app", containerJSON.Config.Labels[DOKKU_APP_LABEL]).
-			Str("ip_address", containerJSON.NetworkSettings.Networks["bridge"].IPAddress).
+			Str("ip_address", containerJSON.NetworkSettings.Networks["bridge"].IPAddress.String()).
 			Msg("register_container")
 	}
 	return nil
@@ -235,22 +233,20 @@ func reconnectAndWatch(ctx context.Context, sinceTimestamp *int64) error {
 }
 
 func watchEvents(ctx context.Context, sinceTimestamp *int64) error {
-	filters := filters.NewArgs(
-		filters.Arg("type", string(events.ContainerEventType)),
-		filters.Arg("label", DOKKU_APP_LABEL),
-		filters.Arg("label", DOKKU_PROCESS_TYPE_LABEL),
-	)
-	msgs, errs := dockerClient.Events(ctx, events.ListOptions{
+	filters := make(client.Filters).
+		Add("type", string(events.ContainerEventType)).
+		Add("label", DOKKU_APP_LABEL, DOKKU_PROCESS_TYPE_LABEL)
+	stream := dockerClient.Events(ctx, client.EventsListOptions{
 		Since:   strconv.FormatInt(*sinceTimestamp, 10),
 		Filters: filters,
 	})
 
 	for {
 		select {
-		case err := <-errs:
+		case err := <-stream.Err:
 			log.Error().Err(err).Msg("events_stream_error")
 			return err
-		case event, ok := <-msgs:
+		case event, ok := <-stream.Messages:
 			if !ok {
 				return fmt.Errorf("events channel closed")
 			}
@@ -291,10 +287,11 @@ func handleEvent(ctx context.Context, event events.Message) error {
 		return nil
 	}
 
-	container, err := dockerClient.ContainerInspect(ctx, containerId)
+	inspect, err := dockerClient.ContainerInspect(ctx, containerId, client.ContainerInspectOptions{})
 	if err != nil {
 		return err
 	}
+	container := inspect.Container
 
 	appName := container.Config.Labels[DOKKU_APP_LABEL]
 
@@ -339,7 +336,7 @@ func handleEvent(ctx context.Context, event events.Message) error {
 		log.Info().
 			Str("container_id", containerShortId).
 			Str("app", appName).
-			Str("ip_address", container.NetworkSettings.Networks["bridge"].IPAddress).
+			Str("ip_address", container.NetworkSettings.Networks["bridge"].IPAddress.String()).
 			Msg("new_container")
 		return nil
 	}
@@ -355,8 +352,8 @@ func handleEvent(ctx context.Context, event events.Message) error {
 	log.Info().
 		Str("container_id", containerShortId).
 		Str("app", appName).
-		Str("old_ip_address", existingContainer.NetworkSettings.Networks["bridge"].IPAddress).
-		Str("new_ip_address", container.NetworkSettings.Networks["bridge"].IPAddress).
+		Str("old_ip_address", existingContainer.NetworkSettings.Networks["bridge"].IPAddress.String()).
+		Str("new_ip_address", container.NetworkSettings.Networks["bridge"].IPAddress.String()).
 		Msg("reloading_proxy")
 
 	if err := runCommand("dokku", "--quiet", "proxy:build-config", appName); err != nil {
