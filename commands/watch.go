@@ -262,6 +262,19 @@ func watchEvents(ctx context.Context, sinceTimestamp *int64) error {
 	}
 }
 
+// shouldRebuildOnDie reports whether a container's "die" event means Docker has
+// permanently given up restarting it, so the app should be rebuilt. This only
+// happens with the "on-failure" restart policy once the restart count reaches a
+// positive maximum retry count. Containers using "always"/"unless-stopped" are
+// restarted by Docker indefinitely and "no" containers are never restarted, so
+// rebuilding them here would create an infinite loop: their MaximumRetryCount is
+// always 0, which matches the RestartCount of a freshly created replacement.
+func shouldRebuildOnDie(restartPolicy container.RestartPolicy, restartCount int) bool {
+	return restartPolicy.IsOnFailure() &&
+		restartPolicy.MaximumRetryCount > 0 &&
+		restartCount >= restartPolicy.MaximumRetryCount
+}
+
 func handleEvent(ctx context.Context, event events.Message) error {
 	containerId := event.Actor.ID
 	containerShortId := containerId[0:9]
@@ -286,17 +299,14 @@ func handleEvent(ctx context.Context, event events.Message) error {
 	appName := container.Config.Labels[DOKKU_APP_LABEL]
 
 	if event.Action == "die" {
-		if container.HostConfig.RestartPolicy.Name == "no" {
-			return nil
-		}
-
-		if container.RestartCount == container.HostConfig.RestartPolicy.MaximumRetryCount {
+		restartPolicy := container.HostConfig.RestartPolicy
+		if shouldRebuildOnDie(restartPolicy, container.RestartCount) {
 			log.Info().
 				Str("container_id", containerShortId).
 				Str("app", appName).
-				Str("restart_policy", string(container.HostConfig.RestartPolicy.Name)).
+				Str("restart_policy", string(restartPolicy.Name)).
 				Int("restart_count", container.RestartCount).
-				Int("max_restart_count", container.HostConfig.RestartPolicy.MaximumRetryCount).
+				Int("max_restart_count", restartPolicy.MaximumRetryCount).
 				Msg("rebuilding_app")
 			if err := runCommand("dokku", "--quiet", "ps:rebuild", appName); err != nil {
 				log.Warn().
@@ -307,6 +317,8 @@ func handleEvent(ctx context.Context, event events.Message) error {
 				return err
 			}
 		}
+
+		return nil
 	}
 
 	// skip non-start events
