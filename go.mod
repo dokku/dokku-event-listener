@@ -5,8 +5,8 @@ go 1.26.0
 require (
 	github.com/josegonzalez/cli-skeleton v0.25.0
 	github.com/mitchellh/cli v1.1.5
-	github.com/moby/moby/api v1.56.1
-	github.com/moby/moby/client v0.6.2
+	github.com/moby/moby/api v1.57.0
+	github.com/moby/moby/client v0.6.3
 	github.com/posener/complete v1.2.3
 	github.com/rs/zerolog v1.35.1
 	github.com/spf13/pflag v1.1.0
